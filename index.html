@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Fitness & Water Tracker</title>
+    <!-- Chart.js CDN with Fixed Version -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --success: #10b981;
+            --background: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background-color: var(--background);
+            color: var(--text-main);
+            padding: 20px;
+            line-height: 1.5;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 25px;
+            background: linear-gradient(135deg, #1e40af, #3b82f6);
+            color: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        }
+        header h1 { font-size: 24px; margin-bottom: 8px; }
+        header p { font-size: 14px; opacity: 0.9; }
+        
+        .welcome-banner {
+            font-size: 16px;
+            font-weight: bold;
+            background: rgba(255, 255, 255, 0.25);
+            padding: 6px 14px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            border: 1px solid var(--border);
+        }
+        .card h2 {
+            font-size: 18px;
+            color: var(--primary-dark);
+            margin-bottom: 15px;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 8px;
+        }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        @media(max-width: 600px) {
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+        .form-group {
+            margin-bottom: 12px;
+        }
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--text-main);
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            background: #fff;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn:hover { background-color: var(--primary-dark); }
+        .btn-danger {
+            background-color: #ef4444;
+        }
+        .btn-danger:hover {
+            background-color: #dc2626;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .metric-box {
+            background: #f1f5f9;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border-left: 4px solid var(--primary);
+        }
+        .metric-box h4 { font-size: 12px; color: var(--text-muted); text-transform: uppercase; }
+        .metric-box p { font-size: 18px; font-weight: bold; color: var(--text-main); margin-top: 5px; }
+
+        .chart-container {
+            position: relative;
+            height: 280px;
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .history-section {
+            margin-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px;
+            background: #fafaf9;
+        }
+        .history-item {
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .history-item:last-child { border-bottom: none; }
+
+        .info-box {
+            background: #ecfdf5;
+            border: 1px solid #10b981;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #065f46;
+        }
+        .info-box h3 { margin-bottom: 6px; font-size: 15px; }
+        .disclaimer {
+            font-size: 11px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Daily Fitness & Water Tracker</h1>
+        <p>Save locally in your browser with performance analytics</p>
+        <div id="welcomeBanner" class="welcome-banner" style="display: none;">नमस्ते, <span id="displayName"></span>!</div>
+    </header>
+
+    <!-- Quick Stats Summary -->
+    <div class="metrics-grid">
+        <div class="metric-box">
+            <h4>Total Sessions</h4>
+            <p id="statSessions">0</p>
+        </div>
+        <div class="metric-box">
+            <h4>अनुमानित कैलोरी</h4>
+            <p id="statCalories">0 kcal</p>
+        </div>
+        <div class="metric-box">
+            <h4>Water</h4>
+            <p id="statWater">0.0 L</p>
+        </div>
+        <div class="metric-box">
+            <h4>Latest BMI</h4>
+            <p id="statBmi">N/A</p>
+            <div class="disclaimer">यह चिकित्सीय सलाह नहीं है</div>
+        </div>
+        <div class="metric-box">
+            <h4>Demo Points</h4>
+            <p id="statPoints">0.00</p>
+        </div>
+    </div>
+
+    <!-- Input Form Card -->
+    <div class="card">
+        <h2>Daily Workout & Health Input Form</h2>
+        <form id="fitnessForm" onsubmit="handleFormSubmit(event)">
+            <div class="grid-2">
+                <div class="form-group">
+                    <label for="userName">User Name:</label>
+                    <input type="text" id="userName" required placeholder="Enter your name">
+                </div>
+                <div class="form-group">
+                    <label for="userWeight">Weight (kg):</label>
+                    <input type="number" id="userWeight" step="0.1" min="20" max="300" required placeholder="e.g. 70">
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="form-group">
+                    <label for="userHeight">Height (cm):</label>
+                    <input type="number" id="userHeight" step="1" min="50" max="250" required placeholder="e.g. 175">
+                </div>
+                <div class="form-group">
+                    <label for="exerciseType">Exercise Type:</label>
+                    <select id="exerciseType">
+                        <option value="Running">Running / Jogging</option>
+                        <option value="Cycling">Cycling</option>
+                        <option value="Yoga">Yoga / Stretching</option>
+                        <option value="Weightlifting">Strength Training / Gym</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="form-group">
+                    <label for="duration">Duration (Minutes):</label>
+                    <input type="number" id="duration" min="1" max="600" required placeholder="e.g. 45">
+                </div>
+                <div class="form-group">
+                    <label for="waterIntake">Water Intake (Liters):</label>
+                    <input type="number" id="waterIntake" step="0.1" min="0" max="10" required placeholder="e.g. 3.0">
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button type="submit" class="btn">Save Locally</button>
+                <button type="button" class="btn btn-danger" onclick="clearAllData()">डेटा मिटाएं</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Performance Graph Card -->
+    <div class="card">
+        <h2>Performance Graph (Dual Axis)</h2>
+        <div class="chart-container">
+            <canvas id="performanceChart"></canvas>
+        </div>
+    </div>
+
+    <!-- History Log Card -->
+    <div class="card">
+        <h2>Session History</h2>
+        <div id="historySection" class="history-section">
+            <p style="text-align:center; color: var(--text-muted); font-size: 13px;">कोई पुराना सत्र नहीं मिला।</p>
+        </div>
+    </div>
+
+    <!-- Info Section -->
+    <div class="card">
+        <h2>System Information</h2>
+        <div class="info-box">
+            <h3>Local Storage Details:</h3>
+            <p>1. <b>Data Persistence:</b> All details are safely kept inside your browser's local storage.</p>
+            <p>2. <b>Security:</b> Names are displayed as plain text.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const STORAGE_KEY = "local_fitness_tracker_db";
+
+    function getDatabase() {
+        try {
+            const rawData = localStorage.getItem(STORAGE_KEY);
+            if (!rawData) return { sessions: [], points: 0 };
+            return JSON.parse(rawData);
+        } catch (e) {
+            console.error("LocalStorage error:", e);
+            return { sessions: [], points: 0 };
+        }
+    }
+
+    function saveDatabase(dbObj) {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(dbObj));
+            return true;
+        } catch (e) {
+            console.error("Storage write failed:", e);
+            return false;
+        }
+    }
+
+    let myChart = null;
+
+    function initChart(sessions) {
+        const canvasElement = document.getElementById('performanceChart');
+        if (!canvasElement) return;
+        const ctx = canvasElement.getContext('2d');
+        
+        const labels = sessions.map((s, index) => '#' + (index + 1) + ' (' + s.exercise + ')');
+        const caloriesData = sessions.map(s => s.calories);
+        const waterData = sessions.map(s => s.water ?? 0);
+
+        if (myChart) {
+            myChart.destroy();
+        }
+
+        myChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'अनुमानित कैलोरी (kcal)',
+                        data: caloriesData,
+                        borderColor: '#2563eb',
+                        backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3,
+                        yAxisID: 'y'
+                    },
+                    {
+                        label: 'Water (Liters)',
+                        data: waterData,
+                        borderColor: '#10b981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        borderWidth: 2,
+                        fill: false,
+                        tension: 0.3,
+                        yAxisID: 'y1'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        beginAtZero: true,
+                        title: { display: true, text: 'अनुमानित कैलोरी (kcal)' }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        beginAtZero: true,
+                        grid: { drawOnChartArea: false },
+                        title: { display: true, text: 'Water (L)' }
+                    }
+                }
+            }
+        });
+    }
+
+    function updateDashboard() {
+        const db = getDatabase();
+        const sessions = db.sessions || [];
+
+        if (sessions.length > 0) {
+            const latestName = sessions[sessions.length - 1].name;
+            if (latestName) {
+                document.getElementById('displayName').innerText = latestName;
+                document.getElementById('welcomeBanner').style.display = 'inline-block';
+            }
+        } else {
+            document.getElementById('welcomeBanner').style.display = 'none';
+        }
+
+        document.getElementById('statSessions').innerText = sessions.length;
+        
+        let totalCal = sessions.reduce((acc, curr) => acc + (curr.calories || 0), 0);
+        let totalWater = sessions.reduce((acc, curr) => acc + (curr.water ?? 0), 0);
+
+        document.getElementById('statCalories').innerText = totalCal + ' kcal';
+        document.getElementById('statWater').innerText = totalWater.toFixed(1) + ' L';
+
+        if (sessions.length > 0) {
+            const last = sessions[sessions.length - 1];
+            let bmiVal = Number(last.bmi);
+            
+            let bmiStatus = "N/A";
+            if (!isNaN(bmiVal)) {
+                if (bmiVal < 18.5) bmiStatus = bmiVal.toFixed(2) + " (अंडरवेट)";
+                else if (bmiVal >= 18.5 && bmiVal < 25) bmiStatus = bmiVal.toFixed(2) + " (सामान्य)";
+                else bmiStatus = bmiVal.toFixed(2) + " (ओवरवेट)";
+            }
+            document.getElementById('statBmi').innerText = bmiStatus;
+        } else {
+            document.getElementById('statBmi').innerText = 'N/A';
+        }
+
+        document.getElementById('statPoints').innerText = (db.points || 0).toFixed(2);
+
+        // Render History List safely using createElement & textContent (XSS Safe)
+        const historyContainer = document.getElementById('historySection');
+        historyContainer.innerHTML = '';
+        
+        if (sessions.length === 0) {
+            const p = document.createElement('p');
+            p.style.textAlign = 'center';
+            p.style.color = 'var(--text-muted)';
+            p.style.fontSize = '13px';
+            p.textContent = 'कोई पुराना सत्र नहीं मिला।';
+            historyContainer.appendChild(p);
+        } else {
+            sessions.slice().reverse().forEach((s) => {
+                let dateStr = s.timestamp ? new Date(s.timestamp).toLocaleDateString() : 'हाल ही में';
+                let sWater = (s.water ?? 0);
+                
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'history-item';
+
+                const spanLeft = document.createElement('span');
+                const b = document.createElement('b');
+                b.textContent = s.name;
+                spanLeft.appendChild(b);
+                spanLeft.appendChild(document.createTextNode(` - ${s.exercise} (${s.duration} mins)`));
+
+                const spanRight = document.createElement('span');
+                spanRight.style.color = 'var(--text-muted)';
+                spanRight.textContent = `${s.calories} kcal | ${sWater} L | ${dateStr}`;
+
+                itemDiv.appendChild(spanLeft);
+                itemDiv.appendChild(spanRight);
+                historyContainer.appendChild(itemDiv);
+            });
+        }
+
+        initChart(sessions);
+    }
+
+    function handleFormSubmit(event) {
+        event.preventDefault();
+
+        const rawName = document.getElementById('userName').value.trim();
+        const weight = parseFloat(document.getElementById('userWeight').value);
+        const heightCm = parseFloat(document.getElementById('userHeight').value);
+        const exercise = document.getElementById('exerciseType').value;
+        const duration = parseInt(document.getElementById('duration').value);
+        const water = parseFloat(document.getElementById('waterIntake').value);
+
+        if (isNaN(weight) || isNaN(heightCm) || isNaN(duration) || weight <= 0 || heightCm <= 0 || duration <= 0) {
+            alert("कृपया सही और वैध मान दर्ज करें।");
+            return;
+        }
+
+        const heightM = heightCm / 100;
+        const bmi = parseFloat((weight / (heightM * heightM)).toFixed(2));
+
+        let burnFactor = 7.0;
+        if (exercise === 'Cycling') burnFactor = 6.0;
+        if (exercise === 'Yoga') burnFactor = 3.5;
+        if (exercise === 'Weightlifting') burnFactor = 5.0;
+
+        const caloriesBurned = Math.round(burnFactor * weight * (duration / 60));
+        const earnedPoints = parseFloat((duration * 0.05).toFixed(2));
+
+        const db = getDatabase();
+        if (!db.sessions) db.sessions = [];
+        
+        db.sessions.push({
+            name: rawName,
+            weight: weight,
+            height: heightCm,
+            exercise: exercise,
+            duration: duration,
+            water: water,
+            bmi: bmi,
+            calories: caloriesBurned,
+            timestamp: new Date().toISOString()
+        });
+        db.points = (db.points || 0) + earnedPoints;
+
+        const isSaved = saveDatabase(db);
+        if (isSaved) {
+            updateDashboard();
+            alert(`डेटा सफलतापूर्वक सेव हो गया!\n- स्वागत है, ${rawName}\n- BMI: ${bmi}\n- अनुमानित कैलोरी: ${caloriesBurned} kcal\n- पानी: ${water} L`);
+            const formEl = document.getElementById('fitnessForm');
+            if (formEl) formEl.reset();
+        } else {
+            alert("डेटा सेव करने में विफल! ब्राउज़र स्टोरेज समस्या हो सकती है।");
+        }
+    }
+
+    function clearAllData() {
+        if (confirm("क्या आप वाकई अपना सारा लोकल डेटा हटाना चाहते हैं?")) {
+            try {
+                localStorage.removeItem(STORAGE_KEY);
+                updateDashboard();
+                alert("सारा डेटा साफ़ कर दिया गया है।");
+            } catch (e) {
+                console.error("Clear storage error:", e);
+                alert("डेटा हटाने में समस्या आई।");
+            }
+        }
+    }
+
+    // Faster DOMContentLoaded instead of window.onload
+    document.addEventListener('DOMContentLoaded', function() {
+        updateDashboard();
+    });
+</script>
+
+</body>
+</html>
